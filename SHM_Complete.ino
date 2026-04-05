@@ -6,15 +6,6 @@
  *   Interface : WiFi HTTP Server → SHM Dashboard HTML
  * ============================================================
  *
- *  LIBRARY YANG PERLU DIINSTALL (Arduino Library Manager):
- *    1. Adafruit MPU6050        (by Adafruit)
- *    2. Adafruit Unified Sensor (by Adafruit)
- *    3. arduinoFFT              (by kosme)
- *    4. HX711                   (by Bogdan Necula / olkal)
- *    5. ArduinoJson             (by Benoit Blanchon) ← versi 6.x
- *
- *  Board: ESP32 Dev Module (Tools → Board → ESP32 Arduino)
- *
  *  ENDPOINT API:
  *    GET  /          → info singkat
  *    GET  /status    → mode + baseline valid
