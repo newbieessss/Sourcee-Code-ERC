@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SHM Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap');
+
+  :root {
+    --bg:       #0f1117;
+    --bg2:      #171b26;
+    --bg3:      #1e2334;
+    --border:   #2a3148;
+    --text:     #e2e8f4;
+    --muted:    #6b7a99;
+    --green:    #22c87a;
+    --yellow:   #f5a623;
+    --red:      #f04b4b;
+    --blue:     #4a9eff;
+    --teal:     #2dd4bf;
+    --font-mono:'JetBrains Mono', monospace;
+    --font-sans:'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    min-height: 100vh;
+    padding: 20px;
+  }
+
+  /* ── TOP BAR ── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .logo {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--blue);
+    letter-spacing: .1em;
+  }
+  .status-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--muted);
+    box-shadow: 0 0 0 0 transparent;
+    transition: all .3s;
+  }
+  .status-dot.live { background: var(--green); box-shadow: 0 0 8px var(--green); animation: pulse 1.5s infinite; }
+  .status-dot.warn { background: var(--yellow); box-shadow: 0 0 8px var(--yellow); }
+  .status-dot.alert { background: var(--red); box-shadow: 0 0 8px var(--red); animation: blink .6s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.2} }
+
+  .conn-area {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .conn-area input {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 12px;
+    padding: 6px 10px;
+    width: 150px;
+  }
+  .conn-area input:focus { outline: none; border-color: var(--blue); }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 6px 12px;
+    cursor: pointer;
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--bg3); border-color: var(--blue); color: var(--blue); }
+  .btn.primary { border-color: var(--blue); color: var(--blue); }
+  .btn.danger  { border-color: var(--red);  color: var(--red);  }
+  .btn.success { border-color: var(--green);color: var(--green);}
+  .btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  .status-badge {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 14px;
+    border-radius: 99px;
+    letter-spacing: .1em;
+    transition: all .3s;
+  }
+  .badge-normal  { background: rgba(34,200,122,.15); color: var(--green); border: 1px solid rgba(34,200,122,.3); }
+  .badge-warning { background: rgba(245,166,35,.15);  color: var(--yellow);border: 1px solid rgba(245,166,35,.3); }
+  .badge-alert   { background: rgba(240,75,75,.2);    color: var(--red);   border: 1px solid rgba(240,75,75,.4);  animation: blink .6s infinite; }
+  .badge-idle    { background: rgba(107,122,153,.1);  color: var(--muted); border: 1px solid var(--border); }
+
+  /* ── GRID LAYOUT ── */
+  .grid-top    { display: grid; grid-template-columns: repeat(6,minmax(0,1fr)); gap: 10px; margin-bottom: 10px; }
+  .grid-middle { display: grid; grid-template-columns: 1.2fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .grid-bottom { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+  /* ── CARD ── */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 16px;
+  }
+  .card-title {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--muted);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  /* ── METRIC CARD ── */
+  .metric-val {
+    font-family: var(--font-mono);
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .metric-sub {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .metric-delta {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    margin-top: 4px;
+  }
+  .delta-ok   { color: var(--green); }
+  .delta-warn { color: var(--yellow); }
+  .delta-bad  { color: var(--red); }
+
+  /* ── Z-SCORE BARS ── */
+  .zrow { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+  .zrow:last-child { margin-bottom: 0; }
+  .zname { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 68px; flex-shrink: 0; }
+  .zbar-bg { flex: 1; height: 5px; background: var(--bg3); border-radius: 3px; overflow: hidden; }
+  .zbar    { height: 100%; border-radius: 3px; transition: width .5s, background .5s; }
+  .zval    { font-family: var(--font-mono); font-size: 10px; color: var(--muted); width: 30px; text-align: right; }
+
+  /* ── FREQ PEAKS ── */
+  .freq-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .freq-chip {
+    flex: 1;
+    background: var(--bg3);
+    border-radius: 8px;
+    padding: 8px;
+    text-align: center;
+  }
+  .freq-hz  { font-family: var(--font-mono); font-size: 15px; font-weight: 600; color: var(--teal); }
+  .freq-lbl { font-size: 9px; color: var(--muted); margin-top: 2px; }
+
+  /* ── BAND ENERGY ── */
+  .band-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 6px; }
+  .band-col  { text-align: center; }
+  .band-wrap { height: 50px; display: flex; align-items: flex-end; justify-content: center; margin-bottom: 4px; }
+  .band-bar  {
+    width: 20px;
+    border-radius: 3px 3px 0 0;
+    background: var(--blue);
+    transition: height .5s, background .5s;
+    min-height: 3px;
+  }
+  .band-label { font-size: 8px; color: var(--muted); line-height: 1.4; }
+  .band-val   { font-family: var(--font-mono); font-size: 9px; color: var(--text); margin-top: 2px; }
+
+  /* ── LOAD ── */
+  .load-row { display: flex; gap: 8px; margin-bottom: 10px; }
+  .load-chip { flex: 1; background: var(--bg3); border-radius: 8px; padding: 9px 10px; }
+  .load-v    { font-family: var(--font-mono); font-size: 17px; font-weight: 600; color: var(--text); }
+  .load-l    { font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .ratio-wrap { position: relative; }
+  .ratio-bg  { height: 8px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  .ratio-fill{ height: 100%; background: var(--blue); border-radius: 4px; transition: width .5s; }
+  .ratio-mid { position: absolute; top: 0; left: 50%; width: 1px; height: 100%; background: var(--border); }
+  .ratio-labels { display: flex; justify-content: space-between; font-size: 8px; color: var(--muted); margin-top: 4px; }
+
+  /* ── TREND CHART ── */
+  .chart-wrap { position: relative; height: 90px; }
+
+  /* ── LOG ── */
+  .log-box {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    height: 110px;
+    overflow-y: auto;
+    background: var(--bg);
+    border-radius: 6px;
+    padding: 8px 10px;
+    line-height: 1.8;
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+  .log-ok   { color: var(--green); }
+  .log-warn { color: var(--yellow); }
+  .log-alert{ color: var(--red); }
+  .log-info { color: var(--muted); }
+
+  /* ── SCORE RING ── */
+  .score-area { display: flex; align-items: center; justify-content: center; gap: 20px; padding: 8px 0; }
+  svg.ring { transform: rotate(-90deg); }
+  .ring-bg   { fill: none; stroke: var(--bg3); stroke-width: 8; }
+  .ring-fill { fill: none; stroke-width: 8; stroke-linecap: round; transition: stroke-dashoffset .6s, stroke .5s; }
+  .score-num { font-family: var(--font-mono); font-size: 26px; font-weight: 600; }
+  .score-lbl { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* ── CONNECTION ERROR ── */
+  .conn-err {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--red);
+    text-align: center;
+    padding: 6px;
+    display: none;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media(max-width:700px){
+    .grid-top    { grid-template-columns: repeat(3,1fr); }
+    .grid-middle { grid-template-columns: 1fr; }
+    .grid-bottom { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- TOP BAR -->
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="status-dot" id="conn-dot"></div>
+    <span class="logo">SHM MONITOR</span>
+    <span class="status-badge badge-idle" id="status-badge">IDLE</span>
+  </div>
+  <div class="conn-area">
+    <input type="text" id="esp-ip" placeholder="192.168.x.x" value="">
+    <button class="btn primary" onclick="connect()">Connect</button>
+    <button class="btn success" id="btn-baseline" onclick="sendCmd('b')" disabled>Baseline</button>
+    <button class="btn primary" id="btn-monitor"  onclick="sendCmd('m')" disabled>Monitor</button>
+    <button class="btn"         id="btn-tare"      onclick="sendCmd('t')" disabled>Tare</button>
+  </div>
+</div>
+<div class="conn-err" id="conn-err">⚠ Tidak bisa terhubung ke ESP32. Cek IP dan pastikan di jaringan yang sama.</div>
+
+<!-- METRIC CARDS (top) -->
+<div class="grid-top">
+  <div class="card">
+    <div class="card-title">RMS (m/s²)</div>
+    <div class="metric-val" id="m-rms">—</div>
+    <div class="metric-delta" id="d-rms"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Crest Factor</div>
+    <div class="metric-val" id="m-cf">—</div>
+    <div class="metric-delta" id="d-cf"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Kurtosis</div>
+    <div class="metric-val" id="m-kurt">—</div>
+    <div class="metric-sub">normal ≈ 3.0</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Freq Peak (Hz)</div>
+    <div class="metric-val" id="m-freq">—</div>
+    <div class="metric-delta" id="d-freq"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Total Load (kg)</div>
+    <div class="metric-val" id="m-load">—</div>
+    <div class="metric-delta" id="d-load"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Load Ratio</div>
+    <div class="metric-val" id="m-ratio">—</div>
+    <div class="metric-delta" id="d-ratio"></div>
+  </div>
+</div>
+
+<!-- MIDDLE ROW -->
+<div class="grid-middle">
+  <!-- LEFT: Z-Score + Score Ring -->
+  <div class="card">
+    <div class="card-title">Anomaly Score & Z-Score</div>
+    <div class="score-area">
+      <div>
+        <svg class="ring" width="80" height="80" viewBox="0 0 80 80">
+          <circle class="ring-bg"   cx="40" cy="40" r="32"/>
+          <circle class="ring-fill" cx="40" cy="40" r="32" id="score-ring"
+            stroke="#22c87a"
+            stroke-dasharray="201"
+            stroke-dashoffset="201"/>
+        </svg>
+      </div>
+      <div style="text-align:center">
+        <div class="score-num" id="score-num">0.0</div>
+        <div class="score-lbl">anomaly score</div>
+        <div style="margin-top:6px;font-size:9px;color:var(--muted)">
+          &lt;6 normal · 6-12 warning · &gt;12 alert
+        </div>
+      </div>
+    </div>
+    <div style="margin-top:10px" id="zscores-wrap"></div>
+  </div>
+
+  <!-- RIGHT: Freq + Band -->
+  <div class="card">
+    <div class="card-title">Frequency Peaks</div>
+    <div class="freq-row">
+      <div class="freq-chip"><div class="freq-hz" id="fp1">—</div><div class="freq-lbl">Peak 1</div></div>
+      <div class="freq-chip"><div class="freq-hz" id="fp2">—</div><div class="freq-lbl">Peak 2</div></div>
+      <div class="freq-chip"><div class="freq-hz" id="fp3">—</div><div class="freq-lbl">Peak 3</div></div>
+    </div>
+    <div class="card-title" style="margin-top:4px">Band Energy Distribution</div>
+    <div class="band-grid" id="band-grid"></div>
+  </div>
+</div>
+
+<!-- BOTTOM ROW -->
+<div class="grid-bottom">
+  <!-- Load distribution -->
+  <div class="card">
+    <div class="card-title">Distribusi Beban</div>
+    <div class="load-row">
+      <div class="load-chip"><div class="load-v" id="lc1">—</div><div class="load-l">Load Cell 1</div></div>
+      <div class="load-chip"><div class="load-v" id="lc2">—</div><div class="load-l">Load Cell 2</div></div>
+    </div>
+    <div class="ratio-wrap">
+      <div class="ratio-bg"><div class="ratio-fill" id="ratio-bar" style="width:50%"></div></div>
+      <div class="ratio-mid"></div>
+    </div>
+    <div class="ratio-labels"><span>LC1 100%</span><span>50/50</span><span>LC2 100%</span></div>
+  </div>
+
+  <!-- Trend chart -->
+  <div class="card">
+    <div class="card-title">Trend RMS</div>
+    <div class="chart-wrap">
+      <canvas id="trend-canvas"></canvas>
+    </div>
+  </div>
+
+  <!-- Event log -->
+  <div class="card">
+    <div class="card-title">Event Log</div>
+    <div class="log-box" id="log-box"></div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script>
+// ── STATE ──────────────────────────────────────────────────
+let ESP_IP       = '';
+let connected    = false;
+let polling      = null;
+let trendChart   = null;
+let trendData    = [];
+let trendLabels  = [];
+let sampleCount  = 0;
+
+// ── CONNECT ────────────────────────────────────────────────
+async function connect() {
+  const ip = document.getElementById('esp-ip').value.trim();
+  if(!ip) { addLog('Masukkan IP ESP32 dulu', 'info'); return; }
+  ESP_IP = ip;
+
+  addLog(`Mencoba connect ke http://${ESP_IP}/status ...`, 'info');
+  try {
+    const r = await fetch(`http://${ESP_IP}/status`, { signal: AbortSignal.timeout(3000) });
+    const d = await r.json();
+    connected = true;
+    document.getElementById('conn-dot').className = 'status-dot live';
+    document.getElementById('conn-err').style.display = 'none';
+    document.getElementById('btn-baseline').disabled = false;
+    document.getElementById('btn-monitor').disabled  = false;
+    document.getElementById('btn-tare').disabled     = false;
+    addLog(`Connected! Mode=${d.mode} | Baseline=${d.baselineValid?'VALID':'NOT SET'}`, 'ok');
+
+    // Mulai polling tiap 1.5 detik
+    if(polling) clearInterval(polling);
+    polling = setInterval(fetchData, 1500);
+  } catch(e) {
+    document.getElementById('conn-err').style.display = 'block';
+    document.getElementById('conn-dot').className = 'status-dot';
+    addLog('Gagal connect: '+e.message, 'alert');
+  }
+}
+
+// ── FETCH DATA ─────────────────────────────────────────────
+async function fetchData() {
+  if(!connected || !ESP_IP) return;
+  try {
+    const r = await fetch(`http://${ESP_IP}/data`, { signal: AbortSignal.timeout(2000) });
+    const d = await r.json();
+    document.getElementById('conn-err').style.display = 'none';
+    updateUI(d);
+  } catch(e) {
+    document.getElementById('conn-dot').className = 'status-dot';
+    document.getElementById('conn-err').style.display = 'block';
+  }
+}
+
+// ── SEND COMMAND ───────────────────────────────────────────
+async function sendCmd(cmd) {
+  if(!ESP_IP) return;
+  try {
+    const r = await fetch(`http://${ESP_IP}/cmd`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `cmd=${cmd}`
+    });
+    const d = await r.json();
+    addLog(`CMD '${cmd}': ${d.msg}`, d.ok?'ok':'alert');
+  } catch(e) {
+    addLog('CMD failed: '+e.message, 'alert');
+  }
+}
+
+// ── UPDATE UI ──────────────────────────────────────────────
+function updateUI(d) {
+  const status = d.status || 'IDLE';
+
+  // Status badge + dot
+  const badge = document.getElementById('status-badge');
+  badge.textContent = status;
+  badge.className   = 'status-badge badge-'+status.toLowerCase();
+  const dot = document.getElementById('conn-dot');
+  dot.className = 'status-dot ' + (status==='ALERT'?'alert':status==='WARNING'?'warn':'live');
+
+  // Metrics
+  function setMetric(id, val, decimals=3) {
+    document.getElementById(id).textContent = parseFloat(val).toFixed(decimals);
+  }
+  setMetric('m-rms',   d.rms,   3);
+  setMetric('m-cf',    d.crestFactor, 2);
+  setMetric('m-kurt',  d.kurtosis, 2);
+  setMetric('m-freq',  d.freqPeak1, 2);
+  setMetric('m-load',  d.totalLoad, 1);
+  setMetric('m-ratio', d.ratio, 3);
+
+  // Delta labels (z-score based)
+  function deltaHTML(z) {
+    z = parseFloat(z);
+    if(z > 4)   return `<span class="delta-bad">▲ ${z.toFixed(2)}σ anomali</span>`;
+    if(z > 2.5) return `<span class="delta-warn">▲ ${z.toFixed(2)}σ waspada</span>`;
+    return `<span class="delta-ok">✓ ${z.toFixed(2)}σ normal</span>`;
+  }
+  document.getElementById('d-rms').innerHTML   = deltaHTML(d.z_rms);
+  document.getElementById('d-cf').innerHTML    = deltaHTML(d.z_cf);
+  document.getElementById('d-freq').innerHTML  = deltaHTML(d.z_freq);
+  document.getElementById('d-load').innerHTML  = deltaHTML(d.z_load);
+  document.getElementById('d-ratio').innerHTML = deltaHTML(d.z_ratio);
+
+  // Score ring
+  const score = parseFloat(d.score);
+  const maxScore = 20;
+  const pct = Math.min(1, score / maxScore);
+  const circ = 2 * Math.PI * 32;
+  const offset = circ * (1 - pct);
+  const ring = document.getElementById('score-ring');
+  ring.style.strokeDashoffset = offset.toFixed(1);
+  const col = score>12?'#f04b4b':score>6?'#f5a623':'#22c87a';
+  ring.style.stroke = col;
+  document.getElementById('score-num').textContent = score.toFixed(1);
+  document.getElementById('score-num').style.color = col;
+
+  // Z-score bars
+  const zkeys  = ['z_rms','z_cf','z_kurt','z_freq','z_load','z_ratio'];
+  const zlabels= ['RMS','CrestFac','Kurtosis','Freq','Load','Ratio'];
+  let html = '';
+  zkeys.forEach((k,i) => {
+    const z = parseFloat(d[k]||0);
+    const pct = Math.min(100, z/5*100);
+    const col = z>4?'#f04b4b':z>2.5?'#f5a623':'#22c87a';
+    html += `<div class="zrow">
+      <span class="zname">${zlabels[i]}</span>
+      <div class="zbar-bg"><div class="zbar" style="width:${pct.toFixed(1)}%;background:${col}"></div></div>
+      <span class="zval">${z.toFixed(2)}</span>
+    </div>`;
+  });
+  document.getElementById('zscores-wrap').innerHTML = html;
+
+  // Freq peaks
+  document.getElementById('fp1').textContent = parseFloat(d.freqPeak1).toFixed(2)+' Hz';
+  document.getElementById('fp2').textContent = parseFloat(d.freqPeak2).toFixed(2)+' Hz';
+  document.getElementById('fp3').textContent = parseFloat(d.freqPeak3).toFixed(2)+' Hz';
+
+  // Band energy
+  const bands = d.bandEnergy || [0,0,0,0];
+  const bmax  = Math.max(...bands.map(parseFloat), 1);
+  const blabels = ['0–10Hz','10–25Hz','25–40Hz','40–50Hz'];
+  let bhtml = '';
+  bands.forEach((v,i) => {
+    const h = Math.max(3, (parseFloat(v)/bmax)*44);
+    const col = parseFloat(v)/bmax > 0.7 ? '#f04b4b' : parseFloat(v)/bmax > 0.4 ? '#f5a623' : '#4a9eff';
+    bhtml += `<div class="band-col">
+      <div class="band-wrap"><div class="band-bar" style="height:${h.toFixed(0)}px;background:${col}"></div></div>
+      <div class="band-label">${blabels[i]}</div>
+      <div class="band-val">${parseFloat(v).toFixed(0)}</div>
+    </div>`;
+  });
+  document.getElementById('band-grid').innerHTML = bhtml;
+
+  // Load cells
+  const ratio = parseFloat(d.ratio);
+  const total = parseFloat(d.totalLoad);
+  document.getElementById('lc1').textContent = (ratio*total).toFixed(1)+' kg';
+  document.getElementById('lc2').textContent = ((1-ratio)*total).toFixed(1)+' kg';
+  document.getElementById('ratio-bar').style.width = (ratio*100).toFixed(1)+'%';
+
+  // Trend
+  sampleCount++;
+  trendData.push(parseFloat(d.rms));
+  trendLabels.push('#'+sampleCount);
+  if(trendData.length > 20) { trendData.shift(); trendLabels.shift(); }
+  if(trendChart) {
+    trendChart.data.labels = [...trendLabels];
+    trendChart.data.datasets[0].data = [...trendData];
+    trendChart.data.datasets[0].borderColor = col;
+    trendChart.data.datasets[0].backgroundColor = col+'22';
+    trendChart.update('none');
+  }
+
+  // Log (hanya log kalau bukan IDLE)
+  if(status !== 'IDLE') {
+    const now = new Date().toTimeString().slice(0,8);
+    addLog(`[${now}] ${status} | score=${score.toFixed(2)} rms=${parseFloat(d.rms).toFixed(3)} kurt=${parseFloat(d.kurtosis).toFixed(2)} freq=${parseFloat(d.freqPeak1).toFixed(2)}Hz`,
+      status==='ALERT'?'alert':status==='WARNING'?'warn':'ok');
+  }
+}
+
+// ── LOG ────────────────────────────────────────────────────
+function addLog(msg, type='info') {
+  const box = document.getElementById('log-box');
+  const line = document.createElement('div');
+  line.className = 'log-'+type;
+  line.textContent = msg;
+  box.insertBefore(line, box.firstChild);
+  if(box.children.length > 40) box.removeChild(box.lastChild);
+}
+
+// ── TREND CHART INIT ───────────────────────────────────────
+window.addEventListener('load', () => {
+  const ctx = document.getElementById('trend-canvas').getContext('2d');
+  trendChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: '#22c87a',
+        borderWidth: 1.5,
+        pointRadius: 2,
+        pointBackgroundColor: '#22c87a',
+        tension: 0.4,
+        fill: true,
+        backgroundColor: '#22c87a22'
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 300 },
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+      scales: {
+        x: { display: false, grid: { display: false } },
+        y: {
+          display: true,
+          grid: { color: 'rgba(255,255,255,0.05)' },
+          ticks: { font: { size: 9, family: 'JetBrains Mono' }, color: '#6b7a99', maxTicksLimit: 4 }
+        }
+      }
+    }
+  });
+
+  addLog('Dashboard ready. Masukkan IP ESP32 lalu klik Connect.', 'info');
+});
+</script>
+</body>
+</html>
